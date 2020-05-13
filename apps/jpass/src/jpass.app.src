@@ -1,0 +1,36 @@
+{application, jpass,
+ [{description, "jpass"},
+  {vsn, "0.1.5"},
+  {registered, []},
+  {mod, {jpass_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[
+    {server_ref, {jpass_server, 'jpass@jproxy2'}},
+    %{server_ref, {jpass_repeater, 'jpass@jproxy1'}},
+
+   {http_enabled, false},
+   {http_listen_ip, {127,0,0,1}},
+   {http_listen_port, 8119},
+
+   {tran_enabled, false},
+   {tran_listen_ip, {127,0,0,1}},
+   {tran_listen_port, 8117},
+
+   {dns_enabled, false},
+   {dns_listen_ip, {127,0,0,1}},
+   {dns_listen_port, 53},
+
+   {server_enabled, true},
+   {server_dns_ip, {8,8,8,8}},
+   {server_dns_port, 53},
+
+   {repeater_enabled, false}
+  ]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.

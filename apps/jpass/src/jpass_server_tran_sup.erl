@@ -1,0 +1,29 @@
+-module(jpass_server_tran_sup).
+
+-behaviour(supervisor).
+
+-export([start_link/0, start_child/2]).
+-export([init/1]).
+
+-define(SERVER, ?MODULE).
+
+start_link() ->
+    %io:format("jpass_server_tran_sup:start_link()~n"),
+    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+
+init([]) ->
+    %io:format("jpass_server_tran_sup:init()~n"),
+    SupFlags = #{strategy => simple_one_for_one,
+                 intensity => 2,
+                 period => 10000},
+    ChildSpecs = [#{id => jpass_server_tran_conn,
+		    start => {jpass_server_tran_conn, start_link, []},
+		    restart => temporary,
+		    shutdown => brutal_kill,
+		    type => worker,
+		    modules => [jpass_server_tran_conn]}],
+    {ok, {SupFlags, ChildSpecs}}.
+
+start_child(ChildName, Params) ->
+    supervisor:start_child(?SERVER, [ChildName, Params]).
+
