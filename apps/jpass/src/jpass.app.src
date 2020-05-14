@@ -1,6 +1,6 @@
 {application, jpass,
  [{description, "jpass"},
-  {vsn, "0.1.6"},
+  {vsn, "0.1.7"},
   {registered, []},
   {mod, {jpass_app, []}},
   {applications,
