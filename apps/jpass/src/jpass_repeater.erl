@@ -24,7 +24,7 @@ handle_call(Request, From, State) ->
     
 handle_cast({{FromPid, undefined}, Cmd, Params}, State) ->
     %io:format("~s REQ ~p~n", [jpass_util:get_datetime_str(), Cmd]),
-    io:format("1"),
+    io:format("S"),
     Request = {{FromPid, erlang:self()}, Cmd, Params},
     {ok, ServerRef} = application:get_env(server_ref),
     gen_server:cast(ServerRef, Request),
@@ -34,7 +34,7 @@ handle_info(Info, State) ->
    case Info of
        {{FromPid, RepeaterPid}, Cmd, Params} ->
            %io:format("~s RES ~p~n", [jpass_util:get_datetime_str(), Cmd]),
-           io:format("2"),
+           io:format("R"),
 
            Response = {{FromPid, RepeaterPid}, Cmd, Params},
            FromPid ! Response;

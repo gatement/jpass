@@ -55,8 +55,8 @@ handle_continue(Continue, State) ->
                 end,
                 {noreply, State#state{socket=Socket}}
             catch
-                Type:Error ->
-                    io:format("jpass_server_http_conn exception ~p:~p~n", [Type, Error]),
+                _Type:Error ->
+                    io:format("HTTP ~s:~p ~p~n", [Host, Port, Error]),
                     jpass_util:send_res(State#state.addr_info, stop, undefined),
                     ok = gen_server:stop(erlang:self()),
                     {noreply, State}

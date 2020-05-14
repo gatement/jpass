@@ -50,8 +50,8 @@ handle_continue(Continue, State) ->
                 ok = gen_tcp:send(Socket, DataBin),
                 {noreply, State#state{socket=Socket}}
             catch
-                Type:Error ->
-                    io:format("jpass_server_tran_conn exception ~p:~p~n", [Type, Error]),
+                _Type:Error ->
+                    io:format("TRAN ~p:~p ~p~n", [ToIp, ToPort, Error]),
                     jpass_util:send_res(State#state.addr_info, stop, undefined),
                     ok = gen_server:stop(erlang:self()),
                     {noreply, State}
