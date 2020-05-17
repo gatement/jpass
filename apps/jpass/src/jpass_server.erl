@@ -56,7 +56,13 @@ handle_cast(Request, State) ->
 		    DataBin = Params,
 		    %io:format("~s HTTP SEND ~pB~n", [jpass_util:get_datetime_str(), size(DataBin)]),
 		    ChildName = erlang:list_to_atom(erlang:pid_to_list(FromPid)),
-		    ChildName ! {send, DataBin};
+		    ChildCreated = lists:member(ChildName, erlang:registered()),
+		    case ChildCreated of
+			true ->
+			    ChildName ! {send, DataBin};
+			false -> 
+                            ignore
+		    end;
 		dns_send ->
 		    Packet = Params,
 		    io:format("~s DNS ~pB~n", [jpass_util:get_datetime_str(), size(Packet)]),
