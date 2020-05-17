@@ -5,14 +5,15 @@
 -export([start_link/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, handle_continue/2, code_change/3, format_status/2, terminate/2]).
 
--record(state, {addr_info, socket}).
+-record(state, {addr_info, host, port, socket}).
 
 start_link(ChildName, {AddrInfo, {Host, Port, DataBin}}) ->
     %io:format("jpass_server_http_conn:start_link(), child_name=~p, request=~p~n", [ChildName, {AddrInfo, {Host, Port, DataBin}}]),
     gen_server:start_link({local, ChildName}, ?MODULE, [AddrInfo, {Host, Port, DataBin}], []).
 
 init([AddrInfo, {Host, Port, DataBin}]) ->
-    %io:format("jpass_server_http_conn:init() request=~p~n", [AddrInfo, {Host, Port, DataBin}]),
+    %io:format("jpass_server_http_conn:init() request=~p~n", [AddrInfo, {Host, Port, size(DataBin)}]),
+    io:format("~s ~p HTTP ~p init~n", [jpass_util:get_datetime_str(), self(), {Host, Port}]),
     {ok, #state{addr_info=AddrInfo}, {continue, {setup, {Host, Port, DataBin}}}}.
 
 handle_call(Request, From, State) ->
@@ -28,11 +29,15 @@ handle_info(Info, State) ->
     case Info of
         {send, DataBin} ->
             %io:format("send to ~p: ~p~n", [Socket, DataBin]),
-            ok = gen_tcp:send(Socket, DataBin);
+            ok = gen_tcp:send(Socket, DataBin),
+	    io:format("~s ~p HTTP ~p sent ~pB~n", [jpass_util:get_datetime_str(), self(), {State#state.host, State#state.port}, size(DataBin)]),
+            ok;
         {tcp, Socket, DataBin} ->
             %io:format("~s ~p HTTP RECV ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
+	    io:format("~s ~p HTTP ~p recv ~pB~n", [jpass_util:get_datetime_str(), self(), {State#state.host, State#state.port}, size(DataBin)]),
             jpass_util:send_res(State#state.addr_info, recv, DataBin);
         {tcp_closed, _} ->
+	    io:format("~s ~p HTTP ~p conn closed~n", [jpass_util:get_datetime_str(), self(), {State#state.host, State#state.port}]),
             jpass_util:send_res(State#state.addr_info, stop, undefined),
             ok = gen_tcp:close(Socket),
             ok = gen_server:stop(erlang:self());
@@ -46,6 +51,7 @@ handle_continue(Continue, State) ->
         {setup, {Host, Port, DataBin}} ->
             try
                 {ok, Socket} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, true}]),
+                io:format("~s ~p HTTP ~p connected~n", [jpass_util:get_datetime_str(), self(), {Host, Port}]),
                 case DataBin of
                     <<>> ->
                         ignore;
@@ -53,7 +59,7 @@ handle_continue(Continue, State) ->
                         %io:format("send to ~p: ~p~n", [Socket, DataBin]),
                         ok = gen_tcp:send(Socket, DataBin)
                 end,
-                {noreply, State#state{socket=Socket}}
+                {noreply, State#state{socket = Socket, host = Host, port = Port}}
             catch
                 _Type:Error ->
                     io:format("HTTP ~s:~p ~p~n", [Host, Port, Error]),
