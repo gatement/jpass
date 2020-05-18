@@ -7,6 +7,8 @@
 
 -record(state, {addr_info, socket}).
 
+-define(TIMEOUT, 600000).
+
 start_link(ChildName, {AddrInfo, {ToIp, ToPort, DataBin}}) ->
     %io:format("jpass_server_tran_conn:start_link(), child_name=~p, request=~p~n", [ChildName, {AddrInfo, {ToIp, ToPort, DataBin}}]),
     gen_server:start_link({local, ChildName}, ?MODULE, [AddrInfo, {ToIp, ToPort, DataBin}], []).
@@ -17,15 +19,18 @@ init([AddrInfo, {ToIp, ToPort, DataBin}]) ->
 
 handle_call(Request, From, State) ->
     io:format("jpass_server_tran_conn:handle_call() request=~p, from=~p, state=~p~n", [Request, From, State]),
-    {reply, my_reply, State}.
+    {reply, my_reply, State, ?TIMEOUT}.
     
 handle_cast(Request, State) ->
     io:format("jpass_server_tran_conn:handle_cast() request=~p, state=~p~n", [Request, State]),
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
+        timeout ->
+            ok = gen_tcp:close(Socket),
+            ok = gen_server:stop(erlang:self());
         {send, DataBin} ->
             %io:format("send to ~p: ~p~n", [Socket, DataBin]),
             ok = gen_tcp:send(Socket, DataBin);
@@ -39,7 +44,7 @@ handle_info(Info, State) ->
         _ ->
            io:format("jpass_server_tran_conn:handle_info() info=~p, state=~p~n", [Info, State])
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_continue(Continue, State) ->
     case Continue of
@@ -48,7 +53,7 @@ handle_continue(Continue, State) ->
                 {ok, Socket} = gen_tcp:connect(ToIp, ToPort, [binary, {packet, 0}, {active, true}]),
                 %io:format("send to ~p: ~p~n", [Socket, DataBin]),
                 ok = gen_tcp:send(Socket, DataBin),
-                {noreply, State#state{socket=Socket}}
+                {noreply, State#state{socket=Socket}, ?TIMEOUT}
             catch
                 _Type:Error ->
                     io:format("TRAN ~p:~p ~p~n", [ToIp, ToPort, Error]),
@@ -58,12 +63,12 @@ handle_continue(Continue, State) ->
             end;
         _ ->
             io:format("jpass_server_tran_conn:handle_continue() continue=~p, state=~p~n", [Continue, State]),
-            {noreply, State}
+            {noreply, State, ?TIMEOUT}
     end.
     
 code_change(_OldVsn, State, _Extra) -> 
     %io:format("jpass_server_tran_conn:code_change() oldVsn=~p, state=~p, extra=~p~n", [_OldVsn, State, _Extra]),
-    {ok, State}.
+    {ok, State, ?TIMEOUT}.
 
 format_status(_Opt, [_PDict, _State]) ->
     %io:format("jpass_server_tran_conn:format_status() opt=~p, pdict=~p, state=~p~n", [_Opt, _PDict, _State]),

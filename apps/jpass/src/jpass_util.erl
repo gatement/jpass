@@ -81,3 +81,14 @@ increase_key(Key, Inc) ->
     if Key2 >= 256 -> Key2 - 256;
               true -> Key2
     end.
+
+colse_tcp_socket(undefined) ->
+    ok;
+colse_tcp_socket(Socket) ->
+    gen_tcp:close(Socket).
+
+colse_udp_socket(undefined) ->
+    ok;
+colse_udp_socket(Socket) ->
+    gen_udp:close(Socket).
+

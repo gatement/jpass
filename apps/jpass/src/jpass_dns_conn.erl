@@ -8,6 +8,7 @@
 -record(state, {from_ip, from_port}).
 
 -define(SERVER, ?MODULE).
+-define(TIMEOUT, 600000).
 
 start_link(FromIp, FromPort, Packet) ->
     %io:format("jpass_dns_conn:start_link()~n"),
@@ -22,14 +23,16 @@ init([FromIp, FromPort, Packet]) ->
 
 handle_call(Request, From, State) ->
     io:format("jpass_dns_conn:handle_call() request=~p, from=~p, state=~p~n", [Request, From, State]),
-    {reply, my_reply, State}.
+    {reply, my_reply, State, ?TIMEOUT}.
     
 handle_cast(Request, State) ->
     io:format("jpass_dns_conn:handle_cast() request=~p, state=~p~n", [Request, State]),
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_info(Info, State) ->
     case Info of
+        timeout ->
+            ok = gen_server:stop(erlang:self());
         {_AddrInfo, recv, CipherParams} ->
             Packet = jpass_util:decode(CipherParams),
             %io:format("~s ~p DNS RECV ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(Packet)]),
@@ -40,7 +43,7 @@ handle_info(Info, State) ->
         _ ->
            io:format("jpass_dns_conn:handle_info() info=~p, state=~p~n", [Info, State])
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_continue(Continue, State) ->
     case Continue of
@@ -50,11 +53,11 @@ handle_continue(Continue, State) ->
         _ ->
             io:format("jpass_dns_conn:handle_continue() continue=~p, state=~p~n", [Continue, State])
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
     
 code_change(_OldVsn, State, _Extra) -> 
     %io:format("jpass_dns_conn:code_change() oldVsn=~p, state=~p, extra=~p~n", [_OldVsn, State, _Extra]),
-    {ok, State}.
+    {ok, State, ?TIMEOUT}.
 
 format_status(_Opt, [_PDict, _State]) ->
     %io:format("jpass_dns_conn:format_status() opt=~p, pdict=~p, state=~p~n", [_Opt, _PDict, _State]),

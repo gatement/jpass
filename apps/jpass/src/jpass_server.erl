@@ -39,9 +39,9 @@ handle_cast(Request, State) ->
 			true ->
 			    ChildName ! {send, DataBin}
 		    end;
-		http_init ->
+		http_send ->
 		    {ToIp, ToPort, DataBin} = Params,
-		    io:format("~s HTTP INIT ~pB TO ~s:~p~n", [jpass_util:get_datetime_str(), size(DataBin), ToIp, ToPort]),
+		    io:format("~s HTTP ~pB TO ~s:~p~n", [jpass_util:get_datetime_str(), size(DataBin), ToIp, ToPort]),
 		    % use FromPid as ChildName
 		    ChildName = erlang:list_to_atom(erlang:pid_to_list(FromPid)),
 		    ChildCreated = lists:member(ChildName, erlang:registered()),
@@ -51,17 +51,6 @@ handle_cast(Request, State) ->
 			    jpass_server_http_sup:start_child(ChildName, {AddrInfo, Params});
 			true ->
 			    ChildName ! {send, DataBin}
-		    end;
-		http_send ->
-		    DataBin = Params,
-		    %io:format("~s HTTP SEND ~pB~n", [jpass_util:get_datetime_str(), size(DataBin)]),
-		    ChildName = erlang:list_to_atom(erlang:pid_to_list(FromPid)),
-		    ChildCreated = lists:member(ChildName, erlang:registered()),
-		    case ChildCreated of
-			true ->
-			    ChildName ! {send, DataBin};
-			false -> 
-                            ignore
 		    end;
 		dns_send ->
 		    Packet = Params,

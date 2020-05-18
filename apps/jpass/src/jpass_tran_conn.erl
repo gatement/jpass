@@ -8,6 +8,7 @@
 -record(state, {socket=undefined}).
 
 -define(SERVER, ?MODULE).
+-define(TIMEOUT, 600000).
 
 start_link(Socket) ->
     %io:format("jpass_tran_conn:start_link()~n"),
@@ -16,12 +17,12 @@ start_link(Socket) ->
 init([Socket]) ->
     {ok, {{A1, B1, C1, D1}, FromPort}} = inet:peername(Socket),
     {ok, {{A2, B2, C2, D2}, ToPort}} = inet:sockname(Socket),
-    io:format("~s ~p TRAN ~p.~p.~p.~p:~p -> ~p.~p.~p.~p:~p~n", [jpass_util:get_datetime_str(), erlang:self(), A1, B1, C1, D1, FromPort, A2, B2, C2, D2, ToPort]),
+    io:format("~s ~p TRAN INIT ~p.~p.~p.~p:~p -> ~p.~p.~p.~p:~p~n", [jpass_util:get_datetime_str(), erlang:self(), A1, B1, C1, D1, FromPort, A2, B2, C2, D2, ToPort]),
     {ok, #state{socket=Socket}}.
 
 handle_call(Request, From, State) ->
     io:format("jpass_tran_conn:handle_call() request=~p, from=~p, state=~p~n", [Request, From, State]),
-    {reply, my_reply, State}.
+    {reply, my_reply, State, ?TIMEOUT}.
     
 handle_cast(Request, State) ->
     Socket = State#state.socket,
@@ -32,18 +33,17 @@ handle_cast(Request, State) ->
 	    io:format("jpass_tran_conn:handle_cast() request=~p, state=~p~n", [Request, State]),
             ignore
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
+        timeout ->
+            ok = gen_tcp:close(Socket),
+            ok = gen_server:stop(erlang:self());
         {tcp, Socket, DataBin} ->
-            %io:format("tcp recvd[~p]: ~p~n", [size(DataBin), DataBin]),
             {ok, {ToIp, ToPort}} = inet:sockname(State#state.socket),
-            %% debug
-            %ToIp = {127,0,0,1},
-            %ToPort = 10000,
-            %io:format("~s ~p TRAN SEND ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
+            io:format("~s ~p TRAN SEND ~p:~p ~p~n", [jpass_util:get_datetime_str(), erlang:self(), ToIp, ToPort, DataBin]),
 	    jpass_util:send_req(tran_send, {ToIp, ToPort, DataBin});
         {tcp_closed, _} ->
             ok = gen_tcp:close(Socket),
@@ -56,17 +56,17 @@ handle_info(Info, State) ->
             ok = gen_tcp:close(Socket),
             ok = gen_server:stop(erlang:self());
         _ ->
-           io:format("jpass_tran_conn:handle_info() info=~p, state=~p~n", [Info, State])
+            io:format("jpass_tran_conn:handle_info() info=~p, state=~p~n", [Info, State])
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_continue(_Continue, State) ->
     io:format("jpass_tran_conn:handle_continue() continue=~p, state=~p~n", [_Continue, State]),
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
     
 code_change(_OldVsn, State, _Extra) -> 
     %io:format("jpass_tran_conn:code_change() oldVsn=~p, state=~p, extra=~p~n", [_OldVsn, State, _Extra]),
-    {ok, State}.
+    {ok, State, ?TIMEOUT}.
 
 format_status(_Opt, [_PDict, _State]) ->
     %io:format("jpass_tran_conn:format_status() opt=~p, pdict=~p, state=~p~n", [_Opt, _PDict, _State]),

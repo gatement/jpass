@@ -5,9 +5,10 @@
 -export([start_link/1, hand_off/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, handle_continue/2, code_change/3, format_status/2, terminate/2]).
 
--record(state, {socket = undefined, transmit = false, data_bin = <<>>}).
+-record(state, {socket = undefined, transmit = false, host, port, data_bin = <<>>}).
 
 -define(SERVER, ?MODULE).
+-define(TIMEOUT, 600000).
 
 start_link(Socket) ->
     %io:format("jpass_http_conn:start_link()~n"),
@@ -19,7 +20,7 @@ init([Socket]) ->
 
 handle_call(Request, From, State) ->
     io:format("jpass_http_conn:handle_call() request=~p, from=~p, state=~p~n", [Request, From, State]),
-    {reply, my_reply, State}.
+    {reply, my_reply, State, ?TIMEOUT}.
     
 handle_cast(Request, State) ->
     Socket = State#state.socket,
@@ -27,19 +28,23 @@ handle_cast(Request, State) ->
         hand_off ->
             ok = inet:setopts(Socket, [{active, true}]);
         _ ->
-	    %io:format("jpass_http_conn:handle_cast() request=~p, state=~p~n", [Request, State]),
+	    io:format("jpass_http_conn:handle_cast() request=~p, state=~p~n", [Request, State]),
             ignore
     end,
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
 handle_info(Info, State) ->
     %io:format("~p jpass_http_conn:handle_info() info=~p, state=~p~n", [erlang:self(), Info, State]),
     Socket = State#state.socket,
     case Info of
+        timeout ->
+            ok = gen_tcp:close(Socket),
+            ok = gen_server:stop(erlang:self()),
+            {noreply, State};
         {tcp, Socket, DataBin} ->
             %io:format("~p ~p~n", [erlang:self(), {tcp, Socket, DataBin}]),
 	    State2 = process_client_data(State, DataBin),
-	    {noreply, State2};
+	    {noreply, State2, ?TIMEOUT};
         {tcp_closed, _Socket} ->
             %io:format("~p ~p~n", [erlang:self(), {tcp_closed, _Socket}]),
             ok = gen_tcp:close(Socket),
@@ -49,7 +54,7 @@ handle_info(Info, State) ->
             DataBin = jpass_util:decode(CipherParams),
             %io:format("~s ~p HTTP RECV ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
             gen_tcp:send(Socket, DataBin),
-            {noreply, State};
+            {noreply, State, ?TIMEOUT};
         {_AddrInfo, stop, _Params} ->
             %io:format("~p ~p~n", [erlang:self(), {_AddrInfo, stop, _Params}]),
             ok = gen_tcp:close(Socket),
@@ -57,16 +62,16 @@ handle_info(Info, State) ->
             {noreply, State};
         _ ->
             io:format("jpass_http_conn:handle_info() info=~p, state=~p~n", [Info, State]),
-            {noreply, State}
+            {noreply, State, ?TIMEOUT}
     end.
 
 handle_continue(_Continue, State) ->
     io:format("jpass_http_conn:handle_continue() continue=~p, state=~p~n", [_Continue, State]),
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
     
 code_change(_OldVsn, State, _Extra) -> 
     %io:format("jpass_http_conn:code_change() oldVsn=~p, state=~p, extra=~p~n", [_OldVsn, State, _Extra]),
-    {ok, State}.
+    {ok, State, ?TIMEOUT}.
 
 format_status(_Opt, [_PDict, _State]) ->
     %io:format("jpass_http_conn:format_status() opt=~p, pdict=~p, state=~p~n", [_Opt, _PDict, _State]),
@@ -86,7 +91,7 @@ process_client_data(State, DataBin) ->
 	    init_conn(State, DataBin);
 	_ ->
             %io:format("~s ~p HTTP SEND ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
-            jpass_util:send_req(http_send, DataBin),
+            jpass_util:send_req(http_send, {State#state.host, State#state.port, DataBin),
             State
     end.
      
@@ -111,13 +116,13 @@ init_conn(State, DataBin) ->
                     Socket = State#state.socket,
                     ok = gen_tcp:send(Socket, ConnectResponse),
                     %io:format("~p send CONNECT resp: ~p~n", [erlang:self(), ConnectResponse]),
-		    jpass_util:send_req(http_init, {Host, Port, <<>>});
+		    jpass_util:send_req(http_send, {Host, Port, <<>>});
                 _ ->
                     %io:format("~s ~p HTTP SEND ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
-		    jpass_util:send_req(http_init, {Host, Port, DataBin})
+		    jpass_util:send_req(http_send, {Host, Port, DataBin})
             end,
 
-            State#state{transmit=true}
+            State#state{transmit=true, host = Host, port = Port}
     end.
 
 get_first_line(DataBin) ->

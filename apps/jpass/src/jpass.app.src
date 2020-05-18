@@ -1,6 +1,6 @@
 {application, jpass,
  [{description, "jpass"},
-  {vsn, "0.1.9"},
+  {vsn, "0.2.0"},
   {registered, []},
   {mod, {jpass_app, []}},
   {applications,
@@ -13,7 +13,7 @@
 
    {http_enabled, false},
    {http_listen_ip, {127,0,0,1}},
-   {http_listen_port, 8119},
+   {http_listen_port, 8110},
 
    {tran_enabled, false},
    {tran_listen_ip, {127,0,0,1}},
