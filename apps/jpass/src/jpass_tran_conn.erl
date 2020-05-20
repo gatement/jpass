@@ -5,7 +5,7 @@
 -export([start_link/1, hand_off/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, handle_continue/2, code_change/3, format_status/2, terminate/2]).
 
--record(state, {socket=undefined}).
+-record(state, {socket = undefined}).
 
 -define(SERVER, ?MODULE).
 -define(TIMEOUT, 600000).
@@ -39,21 +39,21 @@ handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
         timeout ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         {tcp, Socket, DataBin} ->
             {ok, {ToIp, ToPort}} = inet:sockname(State#state.socket),
             io:format("~s ~p TRAN SEND ~p:~p ~p~n", [jpass_util:get_datetime_str(), erlang:self(), ToIp, ToPort, DataBin]),
 	    jpass_util:send_req(tran_send, {ToIp, ToPort, DataBin});
         {tcp_closed, _} ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         {_AddrInfo, recv, CipherParams} ->
             DataBin = jpass_util:decode(CipherParams),
             %io:format("~s ~p TRAN RECV ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
             gen_tcp:send(Socket, DataBin);
         {_AddrInfo, stop, _CipherParams} ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         _ ->
             io:format("jpass_tran_conn:handle_info() info=~p, state=~p~n", [Info, State])

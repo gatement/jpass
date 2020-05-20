@@ -5,7 +5,7 @@
 -export([start_link/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, handle_continue/2, code_change/3, format_status/2, terminate/2]).
 
--record(state, {addr_info, socket}).
+-record(state, {addr_info, socket = undefined}).
 -define(TIMEOUT, 600000).
 
 start_link({AddrInfo, Packet}) ->
@@ -28,12 +28,12 @@ handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
         timeout ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_udp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         {udp, Socket, _FromIp, _FromPort, Packet} ->
             %io:format("~s ~p DNS RECV ~pB FROM ~p:~p~n", [jpass_util:get_datetime_str(), erlang:self(), size(Packet), _FromIp, _FromPort]),
             jpass_util:send_res(State#state.addr_info, recv, Packet),
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_udp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         _ ->
            io:format("jpass_server_dns_conn:handle_info() info=~p, state=~p~n", [Info, State])

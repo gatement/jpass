@@ -5,7 +5,7 @@
 -export([start_link/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, handle_continue/2, code_change/3, format_status/2, terminate/2]).
 
--record(state, {addr_info, host, port, socket}).
+-record(state, {addr_info, host, port, socket = undefined}).
 
 -define(TIMEOUT, 600000).
 
@@ -30,7 +30,7 @@ handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
         timeout ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         {send, DataBin} ->
             %io:format("send to ~p: ~p~n", [Socket, DataBin]),
@@ -44,7 +44,7 @@ handle_info(Info, State) ->
         {tcp_closed, _} ->
 	    io:format("~s ~p HTTP ~p conn closed~n", [jpass_util:get_datetime_str(), self(), {State#state.host, State#state.port}]),
             jpass_util:send_res(State#state.addr_info, stop, undefined),
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self());
         _ ->
            io:format("jpass_server_http_conn:handle_info() info=~p, state=~p~n", [Info, State])

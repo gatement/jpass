@@ -38,7 +38,7 @@ handle_info(Info, State) ->
     Socket = State#state.socket,
     case Info of
         timeout ->
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self()),
             {noreply, State};
         {tcp, Socket, DataBin} ->
@@ -47,7 +47,7 @@ handle_info(Info, State) ->
 	    {noreply, State2, ?TIMEOUT};
         {tcp_closed, _Socket} ->
             %io:format("~p ~p~n", [erlang:self(), {tcp_closed, _Socket}]),
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self()),
             {noreply, State};
         {_AddrInfo, recv, CipherParams} ->
@@ -57,7 +57,7 @@ handle_info(Info, State) ->
             {noreply, State, ?TIMEOUT};
         {_AddrInfo, stop, _Params} ->
             %io:format("~p ~p~n", [erlang:self(), {_AddrInfo, stop, _Params}]),
-            ok = gen_tcp:close(Socket),
+            jpass_util:close_tcp_socket(Socket),
             ok = gen_server:stop(erlang:self()),
             {noreply, State};
         _ ->
@@ -91,7 +91,7 @@ process_client_data(State, DataBin) ->
 	    init_conn(State, DataBin);
 	_ ->
             %io:format("~s ~p HTTP SEND ~pB~n", [jpass_util:get_datetime_str(), erlang:self(), size(DataBin)]),
-            jpass_util:send_req(http_send, {State#state.host, State#state.port, DataBin),
+            jpass_util:send_req(http_send, {State#state.host, State#state.port, DataBin}),
             State
     end.
      

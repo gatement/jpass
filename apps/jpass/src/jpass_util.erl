@@ -1,6 +1,6 @@
 -module(jpass_util).
 
--export([send_req/2, send_res/3, get_datetime_str/0, encode/1, decode/1]).
+-export([send_req/2, send_res/3, get_datetime_str/0, encode/1, decode/1, close_tcp_socket/1, close_udp_socket/1]).
 
 -define(JPASS_SERVER, jpass_server).
 -define(JPASS_REPEATER, jpass_repeater).
@@ -82,13 +82,13 @@ increase_key(Key, Inc) ->
               true -> Key2
     end.
 
-colse_tcp_socket(undefined) ->
+close_tcp_socket(undefined) ->
     ok;
-colse_tcp_socket(Socket) ->
+close_tcp_socket(Socket) ->
     gen_tcp:close(Socket).
 
-colse_udp_socket(undefined) ->
+close_udp_socket(undefined) ->
     ok;
-colse_udp_socket(Socket) ->
+close_udp_socket(Socket) ->
     gen_udp:close(Socket).
 
