@@ -29,7 +29,7 @@ handle_cast(Request, State) ->
             case Cmd of
 		tran_send ->
 		    {ToIp, ToPort, DataBin} = Params,
-		    io:format("~s TRAN ~pB TO ~p:~p ~n", [jpass_util:get_datetime_str(), size(DataBin), ToIp, ToPort]),
+		    io:format("~s TRAN ~p:~p ~n", [jpass_util:get_datetime_str(), ToIp, ToPort]),
 		    % use FromPid as ChildName
 		    ChildName = erlang:list_to_atom(erlang:pid_to_list(FromPid)),
 		    ChildCreated = lists:member(ChildName, erlang:registered()),
@@ -41,7 +41,7 @@ handle_cast(Request, State) ->
 		    end;
 		http_send ->
 		    {ToIp, ToPort, DataBin} = Params,
-		    io:format("~s HTTP ~pB TO ~s:~p~n", [jpass_util:get_datetime_str(), size(DataBin), ToIp, ToPort]),
+		    io:format("~s HTTP ~s:~p~n", [jpass_util:get_datetime_str(), ToIp, ToPort]),
 		    % use FromPid as ChildName
 		    ChildName = erlang:list_to_atom(erlang:pid_to_list(FromPid)),
 		    ChildCreated = lists:member(ChildName, erlang:registered()),
@@ -54,7 +54,7 @@ handle_cast(Request, State) ->
 		    end;
 		dns_send ->
 		    Packet = Params,
-		    io:format("~s DNS ~pB~n", [jpass_util:get_datetime_str(), size(Packet)]),
+		    io:format("~s DNS~n", [jpass_util:get_datetime_str()]),
 		    jpass_server_dns_sup:start_child({AddrInfo, Packet});
 		_ ->
 		    io:format("jpass_server:handle_cast() request=~p, state=~p~n", [Request, State])

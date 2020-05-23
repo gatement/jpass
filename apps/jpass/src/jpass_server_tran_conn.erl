@@ -56,7 +56,7 @@ handle_continue(Continue, State) ->
                 {noreply, State#state{socket=Socket}, ?TIMEOUT}
             catch
                 _Type:Error ->
-                    io:format("TRAN ~p:~p ~p~n", [ToIp, ToPort, Error]),
+                    io:format("ERROR: TRAN ~s:~p ~p~n", [ToIp, ToPort, Error]),
                     jpass_util:send_res(State#state.addr_info, stop, undefined),
                     ok = gen_server:stop(erlang:self()),
                     {noreply, State}
